@@ -42,6 +42,6 @@ class PortiaInstance:
         """
         try:
             plan = self.portia.plan(input)
-            return plan.model_dump_json(indent=2)
+            return plan
         except Exception as e:
             raise e

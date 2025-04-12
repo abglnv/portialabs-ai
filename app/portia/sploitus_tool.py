@@ -20,7 +20,7 @@ class SploitusTool(Tool):
     name: str = "sploitus_search"
     description: str = "Sploitus tool for exploit search"
     args_schema: type[BaseModel] = SploitusToolSchema
-    output_schema: tuple[str, str] = ("dict", "Dict output of the Sploitus API search including total exploits and a list of exploits.")
+    output_schema: tuple[str, str] = ("str", "Dict output of the Sploitus API search including total exploits and a list of exploits.")
 
     def run(
         self,
@@ -29,7 +29,7 @@ class SploitusTool(Tool):
         sortBy: Literal["default", "date", "score"], 
         offset: int,
         type: Literal["exploits", "tools"]
-    ) -> dict:
+    ) :
         """Run the SploitusTool.
         
         Builds the request payload, sets a random User-Agent header,

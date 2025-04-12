@@ -14,7 +14,7 @@ services_collection = db["services"]
 users_collection = db["users"]
 
 @router.post("/new")
-async def create_service(service: Service, token: str = Depends()):
+async def create_service(service: Service, token: str = Depends(decode_token)):
     payload = decode_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -26,7 +26,7 @@ async def create_service(service: Service, token: str = Depends()):
     return {"message": "Service created successfully"}
 
 @router.put("/update/{service_id}")
-async def update_service(service_id: str, service: Service, token: str = Depends()):
+async def update_service(service_id: str, service: Service, token: str = Depends(decode_token)):
     payload = decode_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -37,7 +37,7 @@ async def update_service(service_id: str, service: Service, token: str = Depends
     return {"message": "Service updated successfully"}
 
 @router.delete("/delete/{service_id}")
-async def delete_service(service_id: str, token: str = Depends()):
+async def delete_service(service_id: str, token: str = Depends(decode_token)):
     payload = decode_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")

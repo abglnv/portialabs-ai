@@ -40,7 +40,7 @@ async def refresh_token(request: Request):
     return {"access_token": new_access_token, "token_type": "bearer"}
 
 @router.get("/me")
-async def get_me(token: str = Depends()):
+async def get_me(token: str = Depends(decode_token)):
     payload = decode_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")

@@ -22,3 +22,12 @@ class Report(BaseModel):
     verdict: str
     description: str
     timestamp: datetime
+
+class Technoly(BaseModel):
+    name: str
+    version: str
+    description: str
+    vendor: str
+    service_id: str
+    user_id: str
+    timestamp: datetime

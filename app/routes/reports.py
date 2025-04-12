@@ -12,7 +12,7 @@ reports_collection = db["reports"]
 users_collection = db["users"]
 
 @router.get("/")
-async def get_reports(token: str = Depends()):
+async def get_reports(token: str = Depends(decode_token)):
     payload = decode_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
