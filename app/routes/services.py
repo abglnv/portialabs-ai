@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from app.models import Service
 from app.utils import decode_token
 from pymongo import MongoClient
@@ -14,8 +14,8 @@ services_collection = db["services"]
 users_collection = db["users"]
 
 @router.post("/new")
-async def create_service(service: Service, token: str = Depends(decode_token)):
-    payload = decode_token(token)
+async def create_service(service: Service, request: Request):
+    payload = decode_token(request)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
     user = users_collection.find_one({"email": payload["sub"]})
@@ -26,8 +26,8 @@ async def create_service(service: Service, token: str = Depends(decode_token)):
     return {"message": "Service created successfully"}
 
 @router.put("/update/{service_id}")
-async def update_service(service_id: str, service: Service, token: str = Depends(decode_token)):
-    payload = decode_token(token)
+async def update_service(service_id: str, service: Service, request: Request):
+    payload = decode_token(request)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
     user = users_collection.find_one({"email": payload["sub"]})
@@ -37,8 +37,8 @@ async def update_service(service_id: str, service: Service, token: str = Depends
     return {"message": "Service updated successfully"}
 
 @router.delete("/delete/{service_id}")
-async def delete_service(service_id: str, token: str = Depends(decode_token)):
-    payload = decode_token(token)
+async def delete_service(service_id: str, request: Request):
+    payload = decode_token(request)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
     user = users_collection.find_one({"email": payload["sub"]})

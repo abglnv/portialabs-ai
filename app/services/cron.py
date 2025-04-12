@@ -7,6 +7,7 @@ from app.portia.portia import PortiaInstance
 import boto3
 import zipfile
 import os
+import re 
 
 lambda_client = boto3.client("lambda", region_name="us-east-1")
 
@@ -151,6 +152,32 @@ def upload_lambda(name, code, description, exploit_id):
 
     # return json.loads(invoke_response["Payload"].read())
 
+def extract_and_parse_json(raw_output):
+    # Check if the output contains markdown code fences (triple backticks)
+    if '```' in raw_output:
+        # Try to extract the JSON block inside markdown code fences
+        match = re.search(r'```(?:json)?\s*(\{.*\})\s*```', raw_output, re.DOTALL)
+        if match:
+            json_str = match.group(1)
+        else:
+            # Fallback: attempt to remove all backticks and then extract JSON
+            json_str = raw_output.replace('```', '')
+    else:
+        # If no markdown formatting is detected, attempt to extract the JSON object directly
+        match = re.search(r'(\{.*\})', raw_output, re.DOTALL)
+        if match:
+            json_str = match.group(1)
+        else:
+            raise ValueError("No valid JSON object found in the output")
+
+    # Attempt to parse the extracted JSON string
+    try:
+        parsed_json = json.loads(json_str)
+    except json.JSONDecodeError as e:
+        raise ValueError("Extracted text is not valid JSON") from e
+
+    return parsed_json
+
 def run_cron():
     """
     Run the cron job to fetch and save exploits of the week.
@@ -208,46 +235,68 @@ def run_cron():
         technologies = json.loads(technologies_str)
 
         for i, exploit in enumerate(exploits):
-            plan = portia.plan(f"""
-                You are a security researcher.
-                You are given an exploit information.
-                Your task is to analyze the exploit and based on description generate python function to test services on this exploit.
-                There are 2 types of testing- local and remote. 
-                In remote we provide the python code ip address and domain of the service. 
-                In local we run the code on the server.
-                Python code will be ran on AWS Lambda.
-                The exploit is in JSON format:
-                {exploit}
-                At the end you need to return json with following keys:
-                - code: python function code  
-                - type: type of testing (local or remote)
-                - description: why this test will work. 
-                - name: name of python function code 
-                - id: id of the exploit
-                The output should be in JSON format. No markdown or other formatting.
-                Do not include any explanations or additional information.
-                
-                If remote, your function should be like this:
-                def lambda_handler(event, context):
-                               
-                you can access ip and domain of service through event. One of this 2 will be provided.
-                if local, your function should not take any arguments. it should be called lambda_handler aswell. As ip just use 127.0.0.1
+            run = portia.run(f"""
+                You are a security researcher provided with exploit information in JSON format (available in the variable "exploit"). Your goal is to analyze this exploit and generate a Python function that tests services based on the exploit.
+
+There are two testing scenarios:
+
+    Remote Testing:
+
+        The Python function must be named "lambda_handler" and accept two arguments: event and context.
+
+        The event object will provide either an IP address or a domain of the service (only one of these will be provided).
+
+    Local Testing:
+
+        The Python function must be named "lambda_handler" with no arguments.
+
+        Use the IP address "127.0.0.1" for testing.
+
+After creating the Python function, your output must be a JSON object with these keys:
+
+    code: A string containing the complete Python function code.
+
+    type: The testing type ("local" or "remote").
+
+    description: A brief explanation of why the test will work.
+
+    name: The function’s name (should be "lambda_handler").
+
+    id: The exploit's identifier from the provided exploit information.
+
+The final output must be in valid JSON format with exactly the keys listed above, and no markdown formatting, explanations, or extra information. IN ANY CIRCUMSTANCES, DO NOT INCLUDE ANY MARKDOWN FORMATTING OR ADDITIONAL TEXT. ```'S ARE BANNED 
             """)
-            print(plan)
-            plan_run_json = portia.run_plan(plan)
-            print(plan_run_json)
-            break 
-            print(plan_run_json)
-            type = plan_run_json["type"]
-            code = plan_run_json["code"]
-            description = plan_run_json["description"]
-            name = plan_run_json["name"]
-            exploit_id = plan_run_json["id"]
+            if run.startswith("```json"):
+                run = run[7:-3]
+            if run.endswith("```"):
+                run = run[:-3]
+            print(run)
+            run = json.loads(run)
+            print(run)
+            outputs = run['outputs']
+            print(outputs)
+            final_output = outputs['final_output']
+            print(final_output)
+            val = json.loads(final_output['value'])
+            print(val)
+            if val.startsWith("```json"):
+                val = val[7:-3]
+            if val.endswith("```"):
+                val = val[:-3]
+            summary = json.loads(val)
+            # plan_run_json = json.loads(plan_run_json)
+            # print(plan_run_json.outputs.final_output)
+            print(241)
+            type = summary["type"]
+            code = summary["code"]
+            description = summary["description"]
+            name = summary["name"]
+            exploit_id = summary["id"]
 
             if type == "remote":
                 upload_lambda(name, code, description, exploit_id)
 
-            
+            break 
 
         # save_exploits(exploits)
         print("Exploits saved successfully.")

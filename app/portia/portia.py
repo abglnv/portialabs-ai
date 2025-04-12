@@ -5,6 +5,7 @@ from portia import (
     example_tool_registry,
 )
 from .sploitus_tool import SploitusTool
+import json 
 
 load_dotenv()
 
@@ -32,7 +33,8 @@ class PortiaInstance:
         try:
             # Run the generated plan
             plan_run = self.portia.run_plan(plan)
-            return plan_run.model_dump_json(indent=2)
+            return json.loads(plan_run)
+            # return plan_run.model_dump_json(indent=2)
         except Exception as e:
             raise e
 

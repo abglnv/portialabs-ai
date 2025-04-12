@@ -13,7 +13,6 @@ class Token(BaseModel):
 class Service(BaseModel):
     ip: str = None
     domain: str = None
-    token: str
 
 class Report(BaseModel):
     exploit_id: str
