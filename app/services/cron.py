@@ -270,15 +270,15 @@ The final output must be in valid JSON format with exactly the keys listed above
                 run = run[7:-3]
             if run.endswith("```"):
                 run = run[:-3]
-            print(run)
+            print(273,run)
             run = json.loads(run)
-            print(run)
+            print(275, run)
             outputs = run['outputs']
-            print(outputs)
+            print(277, outputs)
             final_output = outputs['final_output']
-            print(final_output)
+            print(279, final_output)
             val = json.loads(final_output['value'])
-            print(val)
+            print(281, val)
             if val.startsWith("```json"):
                 val = val[7:-3]
             if val.endswith("```"):
