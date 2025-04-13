@@ -8,7 +8,8 @@ import boto3
 import zipfile
 import os
 import re 
-
+from dotenv import load_dotenv
+load_dotenv()
 lambda_client = boto3.client("lambda", region_name="us-east-1")
 
 MONGO_URI = os.getenv("MONGO_URI")
@@ -61,7 +62,7 @@ def fetch_details(id: str):
     try:
         # Execute the curl command
         result = subprocess.run(curl_command, capture_output=True, text=True, check=True)
-
+        print(result.stdout)
         # Parse the JSON response
         response_json = json.loads(result.stdout)
         return response_json
@@ -123,7 +124,7 @@ def upload_lambda(name, code, description, exploit_id):
         response = lambda_client.create_function(
             FunctionName=name,
             Runtime="python3.9",
-            Role="arn:aws:iam::YOUR_ACCOUNT_ID:role/YOUR_LAMBDA_ROLE",
+            Role="arn:aws:lambda:eu-central-1:339713122265:function:security",
             Handler="lambda_function.lambda_handler",
             Code={"ZipFile": open(zip_file_path, "rb").read()},
             Description=description,
@@ -252,7 +253,7 @@ There are two testing scenarios:
 
         Use the IP address "127.0.0.1" for testing.
 
-After creating the Python function, your output must be a JSON object with these keys:
+After creating the Python function, your output (not of the code!) must be a JSON object with these keys:
 
     code: A string containing the complete Python function code.
 
@@ -263,41 +264,27 @@ After creating the Python function, your output must be a JSON object with these
     name: The function’s name (should be "lambda_handler").
 
     id: The exploit's identifier from the provided exploit information.
-
-The final output must be in valid JSON format with exactly the keys listed above, and no markdown formatting, explanations, or extra information. IN ANY CIRCUMSTANCES, DO NOT INCLUDE ANY MARKDOWN FORMATTING OR ADDITIONAL TEXT. ```'S ARE BANNED 
-            """)
-            if run.startswith("```json"):
-                run = run[7:-3]
-            if run.endswith("```"):
-                run = run[:-3]
+                             
+    Code should return dict with verdict and description keys. Verdict- vulnerable or not vulnerable. Description- a brief explanation of test result.
+                             
+    You should save to lambda like that:
+    {{
+        "code": "def lambda_handler(event, context):\n    # Your code here\n    return {{'verdict': 'vulnerable', 'description': 'Exploit works'}}",
+        "type": "remote",
+        "description": "This exploit works because...",
+        "name": "lambda_handler",
+        "id": "exploit_id"
+    }}
+                             
+    The final output must be in valid JSON format with exactly the keys listed above, and no markdown formatting, explanations, or extra information. IN ANY CIRCUMSTANCES, DO NOT INCLUDE ANY MARKDOWN FORMATTING OR ADDITIONAL TEXT. ```'S ARE BANNED .
+                             never return text like Here is the final output JSON object:
+            """, dict=False)
             print(273,run)
-            run = json.loads(run)
-            print(275, run)
-            outputs = run['outputs']
-            print(277, outputs)
-            final_output = outputs['final_output']
-            print(279, final_output)
-            val = json.loads(final_output['value'])
-            print(281, val)
-            if val.startsWith("```json"):
-                val = val[7:-3]
-            if val.endswith("```"):
-                val = val[:-3]
-            summary = json.loads(val)
-            # plan_run_json = json.loads(plan_run_json)
-            # print(plan_run_json.outputs.final_output)
-            print(241)
-            type = summary["type"]
-            code = summary["code"]
-            description = summary["description"]
-            name = summary["name"]
-            exploit_id = summary["id"]
-
-            if type == "remote":
-                upload_lambda(name, code, description, exploit_id)
+            # run = json.loads(run)
+            # print(275, run)
 
             break 
-
+        
         # save_exploits(exploits)
         print("Exploits saved successfully.")
     else:

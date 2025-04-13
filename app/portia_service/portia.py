@@ -3,10 +3,12 @@ from portia import (
     Portia,
     default_config,
     example_tool_registry,
+    PortiaToolRegistry,
 )
 from .sploitus_tool import SploitusTool
 import json 
-
+from portia.open_source_tools.search_tool import SearchTool
+from portia import InMemoryToolRegistry
 load_dotenv()
 
 class PortiaInstance:
@@ -15,17 +17,23 @@ class PortiaInstance:
     def __new__(cls, *args, **kwargs):
         """Ensure only one instance of PortiaInstance is created."""
         if not cls._instance:
+            custom_tool_registry = InMemoryToolRegistry.from_local_tools(
+                [
+                    SploitusTool(id="unique_tool_id")
+                ],
+            )
+            # Instantiate a Portia instance. Load it with the example tools and Portia's github search tool.
             cls._instance = super(PortiaInstance, cls).__new__(cls, *args, **kwargs)
-            cls._instance.portia = Portia(tools=SploitusTool)  
+            cls._instance.portia = Portia(tools=example_tool_registry+custom_tool_registry)  
         return cls._instance
 
-    def run(self, input: str):
+    def run(self, input: str, dict=True):
         """
         Run the Portia instance with the provided input.
         """
         try:
             plan_run = self.portia.run(input)
-            return plan_run.model_dump_json(indent=2)
+            return plan_run.model_dump_json(indent=2) if dict else plan_run
         except Exception as e:
             raise e
         
