@@ -3,7 +3,7 @@ import httpx
 from pymongo import MongoClient
 import subprocess
 import json 
-from app.portia.portia import PortiaInstance
+from app.portia_service.portia import PortiaInstance
 import boto3
 import zipfile
 import os
